@@ -138,8 +138,9 @@ LEASES = {
                 "A firm leases 400 laptops and 12 delivery vans on 11-month terms.",
                 "Which exemptions apply, and what has to be disclosed?",
             ],
-            "Expect agreement on the laptops. The vans depend on whether renewal is reasonably "
-            "certain; if it is, the term is longer than 12 months.",
+            "Expect quick agreement that the laptops fall under the low-value exemption. The vans "
+            "depend on whether renewal is reasonably certain; if it is, the term is longer than "
+            "12 months and the short-term exemption does not apply.",
         ),
     ],
     "standards": [
