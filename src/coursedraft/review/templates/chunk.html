@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{{ c.id }} · Course drafting review{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Source chunk</p>
+    <h1>{{ c.id }}</h1>
+    <p class="lede"><code>{{ c.source_path }}</code> version {{ c.source_version }}{% if not c.source_current %} (superseded){% endif %}, {{ c.locator }}</p>
+  </div>
+</div>
+<section class="panel">
+  <dl class="meta">
+    <dt>Source type</dt><dd>{{ c.source_type.replace("_", " ") }}</dd>
+    <dt>Audience</dt><dd>{{ c.audience }}</dd>
+    <dt>Sensitivity</dt><dd><span class="pill sens-{{ c.sensitivity }}">{{ c.sensitivity }}</span></dd>
+    <dt>Objectives</dt><dd>{{ c.objective_ids|join(", ") or "none tagged" }}</dd>
+    <dt>Paragraph references</dt><dd>{{ c.paragraph_refs|join(", ") or "none" }}</dd>
+  </dl>
+  {% if c.title %}<h2>{{ c.title }}</h2>{% endif %}
+  <p class="chunk-body">{{ c.body }}</p>
+</section>
+{% endblock %}

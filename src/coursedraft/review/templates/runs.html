@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Runs · Course drafting review{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Drafting runs</h1>
+    <p class="lede">Every draft is checked against the source register before it reaches you, and nothing is exported until it is approved.</p>
+  </div>
+  <form class="start" method="post" action="/start">
+    <label for="course_id">Draft a course</label>
+    <select id="course_id" name="course_id">
+      {% for c in courses %}<option value="{{ c.id }}">{{ c.title }}</option>{% endfor %}
+    </select>
+    <button type="submit">Start draft</button>
+  </form>
+</div>
+
+{% set by = stats.runs_by_status %}
+<section class="tiles">
+  <div class="tile"><span class="num">{{ by.get("awaiting_approval", 0) }}</span><span class="lbl">Awaiting approval</span></div>
+  <div class="tile"><span class="num">{{ by.get("exported", 0) }}</span><span class="lbl">Approved and exported</span></div>
+  <div class="tile"><span class="num">{{ by.get("returned", 0) }}</span><span class="lbl">Returned with notes</span></div>
+  <div class="tile"><span class="num">{{ stats.citation_faults_caught }}</span><span class="lbl">Citation faults caught before review</span></div>
+  <div class="tile {% if stats.slides_flagged %}warn{% endif %}"><span class="num">{{ stats.slides_flagged }}</span><span class="lbl">Items flagged for the reviewer</span></div>
+  <div class="tile"><span class="num">{{ stats.model_calls_by_route.get("local", 0) }}<small> / {{ stats.model_calls_by_route.get("local", 0) + stats.model_calls_by_route.get("hosted", 0) }}</small></span><span class="lbl">Model calls kept on the local model</span></div>
+</section>
+
+<section class="panel">
+  <table class="data">
+    <thead>
+      <tr><th>Run</th><th>Course</th><th>Status</th><th class="r">Version</th><th class="r">Slides</th><th class="r">Caught</th><th class="r">Redrafted</th><th class="r">Flagged</th><th>Decision</th><th>Updated</th></tr>
+    </thead>
+    <tbody>
+      {% for r in runs %}
+      {% set v = r.validation or {} %}
+      <tr>
+        <td class="nowrap"><a href="/runs/{{ r.id }}">{{ r.id }}</a></td>
+        <td>{{ r.course_title }}</td>
+        <td><span class="badge s-{{ r.status }}">{{ STATUS[r.status] }}</span></td>
+        <td class="r">{{ r.version or "" }}</td>
+        <td class="r">{{ r.slides or "" }}</td>
+        <td class="r">{{ v.get("caught", "") }}</td>
+        <td class="r">{{ v.get("redrafted", "") }}</td>
+        <td class="r {% if v.get('flagged') %}warn-text{% endif %}">{{ v.get("flagged", "") }}</td>
+        <td>{% if r.decision %}{{ r.decision|capitalize }} by {{ r.reviewer }}{% else %}<span class="muted">Pending</span>{% endif %}</td>
+        <td class="nowrap">{{ r.updated_at|dt }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="10" class="empty">No runs yet. Start a draft above.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

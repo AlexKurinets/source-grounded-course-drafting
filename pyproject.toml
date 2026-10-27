@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "source-grounded-course-drafting"
+version = "1.0.0"
+description = "Drafts editable course decks, facilitator guides and case exercises from source files, with citation checks against a source register and an approval gate before export."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+authors = [{ name = "Alex Kurinets" }]
+dependencies = [
+    "langgraph>=1.2,<2",
+    "langgraph-checkpoint-postgres>=3.2,<4",
+    "psycopg[binary]>=3.2",
+    "psycopg-pool>=3.2",
+    "python-pptx>=1.0",
+    "python-docx>=1.1",
+    "pydantic>=2.7",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.9",
+    "httpx>=0.27",
+    "typer>=0.12",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+anthropic = ["anthropic>=0.60"]
+docling = ["docling>=2.0"]
+dev = [
+    "pytest>=8.2",
+    "ruff>=0.5",
+]
+
+[project.scripts]
+coursedraft = "coursedraft.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+coursedraft = ["schema.sql", "review/templates/*.html", "review/static/*.css"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+# Synthetic course content: long prose strings read better unbroken.
+"src/coursedraft/synthetic.py" = ["E501"]

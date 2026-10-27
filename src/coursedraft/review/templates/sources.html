@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Source register · Course drafting review{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Source register</h1>
+    <p class="lede">Every ingested file version with its hash. A changed file becomes a new version; earlier versions stay, so an approved draft always traces to what it was built on.</p>
+  </div>
+</div>
+<section class="panel">
+  <table class="data">
+    <thead><tr><th>Course</th><th>File</th><th>Type</th><th>Sensitivity</th><th class="r">Version</th><th>Current</th><th class="r">Chunks</th><th>sha256</th><th>Ingested</th></tr></thead>
+    <tbody>
+      {% for s in sources %}
+      <tr class="{% if not s.current %}superseded{% endif %}">
+        <td>{{ s.course_title }}</td>
+        <td><code>{{ s.path }}</code></td>
+        <td>{{ s.source_type.replace("_", " ") }}</td>
+        <td><span class="pill sens-{{ s.sensitivity }}">{{ s.sensitivity }}</span></td>
+        <td class="r">{{ s.version }}</td>
+        <td>{{ "yes" if s.current else "superseded" }}</td>
+        <td class="r">{{ s.chunks }}</td>
+        <td><code class="small">{{ s.sha256[:12] }}</code></td>
+        <td class="nowrap">{{ s.ingested_at|dt }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9" class="empty">Nothing ingested yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="small muted">Restricted material (instructors' notes from client engagements) is only ever sent to the local model. Public and internal material may go to the hosted model under zero-retention API terms.</p>
+</section>
+{% endblock %}

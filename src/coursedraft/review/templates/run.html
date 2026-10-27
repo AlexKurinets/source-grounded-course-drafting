@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}{{ run.id }} · Course drafting review{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <p class="eyebrow">{{ run.course_title }}</p>
+    <h1>{{ run.id }}</h1>
+    <p class="lede">Draft version {{ run.version }} · {{ run.slides }} slides · created {{ run.created_at|dt }}</p>
+  </div>
+  <span class="badge big s-{{ run.status }}">{{ STATUS[run.status] }}</span>
+</div>
+
+{% if error %}<div class="alert">{{ error }}</div>{% endif %}
+
+<div class="two">
+  <section class="panel">
+    <h2>Checks before review</h2>
+    <p class="summary">
+      {{ v.passes }} validation pass{{ "es" if v.passes != 1 }}.
+      <b>{{ v.caught }}</b> issue{{ "s" if v.caught != 1 }} caught,
+      <b>{{ v.redrafted }}</b> item{{ "s" if v.redrafted != 1 }} redrafted,
+      <b class="{% if v.flagged %}warn-text{% endif %}">{{ v.flagged }}</b> flagged for you.
+    </p>
+    {% set ns = namespace(any=false) %}
+    <ul class="issues">
+      {% for h in v.history or [] %}{% for i in h.issues %}{% set ns.any = true %}
+      <li>
+        <span class="pill">Pass {{ h.pass }}</span>
+        <span class="pill c-{{ i.check }}">{{ CHECKS[i.check] }}</span>
+        <b>{{ i.slide_key }}</b>: {{ i.detail }}
+        {% if h.pass < v.passes and i.slide_key not in (v.unresolved|map(attribute="slide_key")|list) %}<span class="fixed">redrafted, passed</span>{% endif %}
+      </li>
+      {% endfor %}{% endfor %}
+    </ul>
+    {% if not ns.any %}<p class="muted">Nothing failed on the first pass.</p>{% endif %}
+    {% if run.source_changes %}
+    <h3>Sources changed since the last approved deck</h3>
+    <p class="muted small">Compared with {{ prev.run_id }} version {{ prev.version }}, approved by {{ prev.reviewer }} on {{ prev.decided_at|dt("%d %b %Y") }}.</p>
+    <ul class="changes">
+      {% for c in run.source_changes %}
+      <li><code>{{ c.path }}</code> {% if c.before %}v{{ c.before }}{% else %}not used{% endif %} → {% if c.now %}v{{ c.now }}{% else %}not used{% endif %}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </section>
+
+  <section class="panel decision">
+    <h2>Decision</h2>
+    {% if run.status == "awaiting_approval" %}
+    <p class="muted small">Approving resumes the paused workflow and writes the deck, the facilitator guide and the case into the templates. Returning ends the run with your notes and exports nothing.</p>
+    <form method="post" action="/runs/{{ run.id }}/decision">
+      <label for="reviewer">Reviewer</label>
+      <input id="reviewer" name="reviewer" required placeholder="Your name">
+      <label for="notes">Notes</label>
+      <textarea id="notes" name="notes" rows="3" placeholder="What you checked, or what needs to change"></textarea>
+      <div class="buttons">
+        <button name="decision" value="approved" class="approve">Approve and export</button>
+        <button name="decision" value="returned" class="return">Return with notes</button>
+      </div>
+    </form>
+    {% elif run.decision %}
+    <p><span class="badge s-{{ run.status }}">{{ run.decision|capitalize }}</span> by <b>{{ run.reviewer }}</b> on {{ run.decided_at|dt }}</p>
+    {% if run.review_notes %}<blockquote>{{ run.review_notes }}</blockquote>{% endif %}
+    {% if run.exports %}
+    <h3>Exported files</h3>
+    <ul class="exports">
+      {% for e in run.exports %}
+      <li><a href="/exports/{{ e.id }}">{{ e.path.replace("\\", "/").split("/")[-1] }}</a> <span class="muted small">sha256 {{ e.sha256[:12] }}</span></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% else %}
+    <p class="muted">No decision recorded.</p>
+    {% endif %}
+    <p class="small"><a href="/audit?run_id={{ run.id }}">Model calls for this run</a></p>
+  </section>
+</div>
+
+<section class="panel">
+  <h2>Deck{% if prev %}, beside the last approved version{% endif %}</h2>
+  <div class="slide-grid head">
+    <div>This draft (participant slides and instructor-only notes)</div>
+    <div>{% if prev %}Last approved: {{ prev.run_id }} v{{ prev.version }}{% else %}No earlier approved version of this course{% endif %}</div>
+  </div>
+  {% for s in draft.slides %}
+  {% set p = prev_slides.get(s.key) %}
+  <div class="slide-grid">
+    <article class="slide {% if s.flags %}flagged{% endif %}">
+      <header>
+        <span class="num">{{ loop.index }}</span>
+        <span class="layout">{{ s.layout }}</span>
+        <span class="pill aud">Participant</span>
+        {% if s.attempts > 1 %}<span class="pill redraft">Redrafted</span>{% endif %}
+        {% if prev %}{% if not p %}<span class="pill new">New</span>{% elif p.title != s.title or p.body != s.body or p.right != s.right %}<span class="pill changed">Changed</span>{% endif %}{% endif %}
+      </header>
+      <h3>{{ s.title }}</h3>
+      {% if s.right %}
+      <div class="cols"><ul>{% for b in s.body %}<li>{{ b }}</li>{% endfor %}</ul><ul class="q">{% for b in s.right %}<li>{{ b }}</li>{% endfor %}</ul></div>
+      {% else %}
+      <ul>{% for b in s.body %}<li>{{ b }}</li>{% endfor %}</ul>
+      {% endif %}
+      {% if s.citations %}
+      <p class="cites">{% for c in s.citations %}<a class="chip" href="/chunks/{{ c.chunk_id }}" title="Open the source chunk">{{ c.ref }} · {{ c.chunk_id }}</a>{% endfor %}</p>
+      {% endif %}
+      {% for f in s.flags %}<p class="flag">{{ f }}</p>{% endfor %}
+      {% if s.notes %}
+      <details>
+        <summary>Presenter notes, instructor only</summary>
+        <p class="notes">{{ s.notes }}</p>
+        <p class="small muted">Sources: {% for cid in s.source_chunk_ids %}<a href="/chunks/{{ cid }}">{{ cid }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</p>
+      </details>
+      {% endif %}
+    </article>
+    <article class="slide prev">
+      {% if p %}
+      <h3>{{ p.title }}</h3>
+      {% if p.right %}
+      <div class="cols"><ul>{% for b in p.body %}<li>{{ b }}</li>{% endfor %}</ul><ul class="q">{% for b in p.right %}<li>{{ b }}</li>{% endfor %}</ul></div>
+      {% else %}
+      <ul>{% for b in p.body %}<li>{{ b }}</li>{% endfor %}</ul>
+      {% endif %}
+      {% if p.citations %}<p class="cites">{% for c in p.citations %}<span class="chip muted-chip">{{ c.ref }} · {{ c.chunk_id }}</span>{% endfor %}</p>{% endif %}
+      {% else %}
+      <p class="muted small">{% if prev %}Not in the approved version.{% else %}Nothing to compare yet.{% endif %}</p>
+      {% endif %}
+    </article>
+  </div>
+  {% endfor %}
+</section>
+
+{% if draft.case %}
+<section class="panel">
+  <h2>Case exercise: {{ draft.case.title }}</h2>
+  <p class="muted small">Both parts are generated from one fact record, and every figure and company name in either part is checked against it.</p>
+  <div class="two">
+    <div>
+      <h3>Participant version</h3>
+      {% for para in draft.case.participant %}<p>{{ para }}</p>{% endfor %}
+      <p><b>Decision point.</b> {{ draft.case.decision_point }}</p>
+      <ol>{% for q in draft.case.questions %}<li>{{ q }}</li>{% endfor %}</ol>
+    </div>
+    <div class="instructor">
+      <h3>Facilitator note, instructor only</h3>
+      <ul>{% for n in draft.case.facilitator_note %}<li>{{ n }}</li>{% endfor %}</ul>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{% if draft.guide %}
+<section class="panel">
+  <h2>Facilitator guide</h2>
+  <table class="data guide">
+    <thead><tr><th>Objective</th><th class="r">Minutes</th><th>Flow</th><th>Anticipated responses</th><th>Likely misconceptions</th></tr></thead>
+    <tbody>
+      {% for g in draft.guide %}
+      <tr>
+        <td><b>{{ g.objective_id }}</b> {{ g.title }}</td>
+        <td class="r">{{ g.minutes }}</td>
+        <td><ul>{% for f in g.flow %}<li>{{ f }}</li>{% endfor %}</ul></td>
+        <td><ul>{% for a in g.anticipated %}<li>{{ a }}</li>{% endfor %}</ul></td>
+        <td><ul>{% for m in g.misconceptions %}<li>{{ m }}</li>{% endfor %}</ul></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endif %}
+{% endblock %}

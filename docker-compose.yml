@@ -1,0 +1,68 @@
+x-app: &app
+  build: .
+  environment:
+    COURSEDRAFT_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/coursedraft
+    COURSEDRAFT_DATA_DIR: /data
+    COURSEDRAFT_TEMPLATE_DIR: /app/templates
+    COURSEDRAFT_HOSTED_ADAPTER: ${COURSEDRAFT_HOSTED_ADAPTER:-offline}
+    COURSEDRAFT_LOCAL_ADAPTER: ${COURSEDRAFT_LOCAL_ADAPTER:-offline}
+    COURSEDRAFT_HOSTED_MODEL: ${COURSEDRAFT_HOSTED_MODEL:-claude-opus-5-5}
+    COURSEDRAFT_LOCAL_MODEL: ${COURSEDRAFT_LOCAL_MODEL:-qwen3:14b}
+    COURSEDRAFT_OLLAMA_URL: ${COURSEDRAFT_OLLAMA_URL:-http://host.docker.internal:11434/v1}
+    ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+  volumes:
+    - coursedraft-data:/data
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: coursedraft
+    ports:
+      - "${POSTGRES_PORT:-5452}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d coursedraft"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  seed:
+    <<: *app
+    command: coursedraft seed --if-empty
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    <<: *app
+    command: coursedraft api --host 0.0.0.0 --port 8090
+    ports:
+      - "${API_PORT:-8090}:8090"
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8090/health')"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  review:
+    <<: *app
+    command: coursedraft review --host 0.0.0.0 --port 8091
+    environment:
+      COURSEDRAFT_API_URL: http://api:8090
+    ports:
+      - "${REVIEW_PORT:-8091}:8091"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8091/health')"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  coursedraft-data:

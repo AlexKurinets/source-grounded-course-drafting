@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Course drafting review{% endblock %}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">Course drafting <span>review</span></a>
+    <nav>
+      <a href="/" {% if nav == "runs" %}class="active"{% endif %}>Runs</a>
+      <a href="/sources" {% if nav == "sources" %}class="active"{% endif %}>Source register</a>
+      <a href="/audit" {% if nav == "audit" %}class="active"{% endif %}>Model calls</a>
+    </nav>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

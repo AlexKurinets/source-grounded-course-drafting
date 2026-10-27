@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Model calls · Course drafting review{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Model calls{% if run_id %} for {{ run_id }}{% endif %}</h1>
+    <p class="lede">Each call is logged before it is made: which route it took, which model, and exactly which chunks were sent.</p>
+  </div>
+  {% if run_id %}<a class="button-link" href="/audit">All runs</a>{% endif %}
+</div>
+<section class="panel">
+  <table class="data">
+    <thead><tr><th>Time</th><th>Run</th><th>Step</th><th>Route</th><th>Adapter / model</th><th>Sensitivity</th><th>Chunks sent</th><th class="r">Characters</th></tr></thead>
+    <tbody>
+      {% for m in calls %}
+      <tr>
+        <td class="nowrap">{{ m.created_at|dt }}</td>
+        <td><a href="/runs/{{ m.run_id }}">{{ m.run_id }}</a></td>
+        <td>{{ m.step }}</td>
+        <td><span class="pill route-{{ m.route }}">{{ m.route }}</span></td>
+        <td>{{ m.adapter }} / {{ m.model }}</td>
+        <td><span class="pill sens-{{ m.sensitivity }}">{{ m.sensitivity }}</span></td>
+        <td class="ids">{% for cid in m.chunk_ids[:6] %}{% if cid.startswith("S") %}<a href="/chunks/{{ cid }}">{{ cid }}</a>{% else %}{{ cid }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}{% if m.chunk_ids|length > 6 %} +{{ m.chunk_ids|length - 6 }}{% endif %}</td>
+        <td class="r">{{ "{:,}".format(m.chars_sent) }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8" class="empty">No model calls recorded.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}
