@@ -83,7 +83,7 @@ docker compose exec api coursedraft ingest /data/sources/lease-accounting-update
 docker compose exec api coursedraft eval
 ```
 
-`coursedraft eval` drafts every course as a hidden eval run and fails if any citation, audience, fact-record or layout failure survives its redraft. In production the same gate ran against 20 past decks, and a prompt or retrieval change shipped only if nothing reached review; here it runs against the three synthetic courses.
+`coursedraft eval` drafts every course as a hidden eval run and fails if any citation, audience, fact-record or layout failure survives its redraft. In production the same gate ran against 20 past decks, scored against the versions instructors had actually taught, and a prompt or retrieval change shipped only if no failure reached review; here it runs against the three synthetic courses.
 
 Without Docker, with Python 3.12+ and a Postgres that has pgvector:
 
